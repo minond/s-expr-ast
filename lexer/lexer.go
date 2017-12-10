@@ -16,6 +16,7 @@ const (
 	EOF = "\n"
 
 	InvalidToken      TokenKind = "invalid"
+	IdentifierToken   TokenKind = "identifier"
 	StringToken       TokenKind = "string"
 	OperatorToken     TokenKind = "operator"
 	BracketToken      TokenKind = "bracket"
@@ -45,13 +46,19 @@ func Lex(raw string) []Token {
 		} else if isDigit(letter) {
 			token, len := parseNumber(letters, i)
 			tokens = append(tokens, token)
-			i += len
+			i += len - 1
 		} else if isSpace(letter) {
 			continue
 		} else if word, len := lookaheadWord(letters, i); isBoolean(word) {
-			i += len
+			i += len - 1
 			tokens = append(tokens, Token{
 				kind:  BooleanToken,
+				value: word,
+			})
+		} else if word := lookahead(letters, i, 2); isOperator(word) {
+			i += 1
+			tokens = append(tokens, Token{
+				kind:  OperatorToken,
 				value: word,
 			})
 		} else if word := lookahead(letters, i, 1); isOperator(word) {
@@ -69,7 +76,7 @@ func Lex(raw string) []Token {
 			i += len - 1
 
 			tokens = append(tokens, Token{
-				kind:  InvalidToken,
+				kind:  IdentifierToken,
 				value: word,
 			})
 		}
@@ -170,7 +177,16 @@ func isOperator(str string) bool {
 		str == "^" ||
 		str == "/" ||
 		str == "&" ||
-		str == "."
+		str == "." ||
+		str == ";" ||
+		str == "@" ||
+		str == "::" ||
+		str == "->" ||
+		str == "//"
+}
+
+func empty() (Token, int) {
+	return Token{}, 0
 }
 
 func lookahead(letters []string, start, k int) string {
@@ -185,17 +201,17 @@ func lookahead(letters []string, start, k int) string {
 	return buff
 }
 
-func empty() (Token, int) {
-	return Token{}, 0
-}
-
 func lookaheadWord(letters []string, start int) (string, int) {
 	buff := ""
 
 	for i := start; i < len(letters); i++ {
 		curr := letters[i]
 
-		if isSpace(curr) || isOperator(curr) || isBracket(curr) {
+		if isSpace(curr) || isBracket(curr) {
+			break
+		}
+
+		if isOperator(lookahead(letters, i, 1)) || isOperator(lookahead(letters, i, 2)) {
 			break
 		}
 
@@ -236,6 +252,8 @@ func parseNumber(letters []string, start int) (Token, int) {
 	kind := RealNumberToken
 	peek := lookahead(letters, start+1, 1)
 
+	isInt := true
+
 	// Type of number?
 	if peek == "x" {
 		kind = HexNumberToken
@@ -250,11 +268,20 @@ func parseNumber(letters []string, start int) (Token, int) {
 	for i := start; i < len(letters); i++ {
 		curr := letters[i]
 
+		isRealChar := isDigit(curr) || curr == "."
+		isRealKind := kind == RealNumberToken || kind == InvalidToken
+
 		if kind == HexNumberToken && isHexDigit(curr) {
 			buff = buff + curr
 		} else if kind == BinaryNumberToken && isBinaryDigit(curr) {
 			buff = buff + curr
-		} else if isDigit(curr) {
+		} else if isRealKind && isRealChar {
+			if isInt == true && curr == "." {
+				isInt = false
+			} else if !isDigit(curr) {
+				kind = InvalidToken
+			}
+
 			buff = buff + curr
 		} else {
 			return Token{
