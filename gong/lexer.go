@@ -47,12 +47,12 @@ func Lex(raw string) []Token {
 	for i := 0; i < lettersLen; i++ {
 		letter := letters[i]
 
-		if isStringQuote(letter) {
-			token, len := parseString(letters, i)
+		if isQuote(letter) {
+			token, len := parseQuoted(letters, i, letter)
 			tokens = append(tokens, token)
 			i += len
 		} else if isDigit(letter) {
-			token, len := parseNumber(letters, i)
+			token, len := parseNumeric(letters, i)
 			tokens = append(tokens, token)
 			i += len - 1
 		} else if isEol(letter) {
@@ -174,8 +174,8 @@ func isSpace(str string) bool {
 	return str == " " || str == "\t" || str == "\n" || str == "\r"
 }
 
-func isStringQuote(str string) bool {
-	return str == `"`
+func isQuote(str string) bool {
+	return str == `"` || str == `'`
 }
 
 func isStringQuoteEsc(str string) bool {
@@ -202,7 +202,6 @@ func isOperator(str string) bool {
 		str == "^" ||
 		str == "/" ||
 		str == "&" ||
-		str == "." ||
 		str == ";" ||
 		str == "@" ||
 		str == "=" ||
@@ -210,10 +209,6 @@ func isOperator(str string) bool {
 		str == "::" ||
 		str == "->" ||
 		str == "//"
-}
-
-func empty() (Token, int) {
-	return Token{}, 0
 }
 
 func lookahead(letters []string, start, k int) string {
@@ -234,7 +229,7 @@ func lookaheadWord(letters []string, start int) (string, int) {
 	for i := start; i < len(letters); i++ {
 		curr := letters[i]
 
-		if isSpace(curr) || isBracket(curr) {
+		if isSpace(curr) || isBracket(curr) || isQuote(curr) {
 			break
 		}
 
@@ -248,10 +243,11 @@ func lookaheadWord(letters []string, start int) (string, int) {
 	return buff, len(buff)
 }
 
-func parseString(letters []string, start int) (Token, int) {
+func parseQuoted(letters []string, start int, closingQuote string) (Token, int) {
 	buff := ""
+	lettersLen := len(letters)
 
-	for i := start + 1; i < len(letters); i++ {
+	for i := start; i < lettersLen; i++ {
 		curr := letters[i]
 		prev := ""
 
@@ -259,36 +255,41 @@ func parseString(letters []string, start int) (Token, int) {
 			prev = letters[i-1]
 		}
 
-		// The i = start + 1 up top takes care of skipping the opening quote,
-		// and this below takes handles the closing (unescaped) quote.
-		if isStringQuote(curr) && !isStringQuoteEsc(prev) {
+		// Add to the buffer anything that's not an escape of the last EOL.
+		if !isStringQuoteEsc(curr) && i+1 != lettersLen {
+			buff = buff + curr
+		}
+
+		// If we're not at the very beginning, we're parsing a quote - our
+		// closingQuote - and the previous char wasn't an escape, we're done.
+		if i != start && isQuote(curr) && !isStringQuoteEsc(prev) && curr == closingQuote {
 			return Token{
 				kind:  StringToken,
 				value: buff,
 			}, i - start
-		} else if !isStringQuoteEsc(curr) {
-			buff = buff + curr
 		}
 	}
 
-	return empty()
+	return Token{
+		kind:  InvalidToken,
+		value: buff,
+	}, len(buff)
 }
 
-func parseNumber(letters []string, start int) (Token, int) {
+func parseNumeric(letters []string, start int) (Token, int) {
 	buff := ""
 	kind := RealNumberToken
-	peek := lookahead(letters, start+1, 1)
-
+	peek := lookahead(letters, start, 2)
 	isInt := true
 
-	// Type of number?
-	if peek == "x" {
+	// Is this a non-decimal representation of a number?
+	if peek == "0x" {
 		kind = HexNumberToken
-		buff = "0x"
+		buff = peek
 		start += 2
-	} else if peek == "b" {
+	} else if peek == "0b" {
 		kind = BinaryNumberToken
-		buff = "0b"
+		buff = peek
 		start += 2
 	}
 
@@ -318,5 +319,8 @@ func parseNumber(letters []string, start int) (Token, int) {
 		}
 	}
 
-	return empty()
+	return Token{
+		kind:  InvalidToken,
+		value: buff,
+	}, len(buff)
 }

@@ -31,4 +31,7 @@ func main() {
 
 
 	5`)
+	show(`one "tw\"o" 'thr\'ee' '"""""""' "''''''''''"`)
+	show(`iiii"i`)
+	show(`0b0001 1x2`)
 }
