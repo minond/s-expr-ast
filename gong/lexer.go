@@ -15,6 +15,7 @@ type Token struct {
 const (
 	EOF = "\n"
 
+	EofToken          TokenKind = "eof"
 	InvalidToken      TokenKind = "invalid"
 	IdentifierToken   TokenKind = "identifier"
 	StringToken       TokenKind = "string"
@@ -27,7 +28,11 @@ const (
 )
 
 func (tok Token) String() string {
-	return fmt.Sprintf(`(%s "%s")`, tok.kind, tok.value)
+	if tok.kind == EofToken {
+		return "(eof)"
+	} else {
+		return fmt.Sprintf(`(%s "%s")`, tok.kind, tok.value)
+	}
 }
 
 func Lex(raw string) []Token {
@@ -82,7 +87,9 @@ func Lex(raw string) []Token {
 		}
 	}
 
-	return tokens
+	return append(tokens, Token{
+		kind: EofToken,
+	})
 }
 
 func isBinaryDigit(str string) bool {
@@ -167,7 +174,9 @@ func isBracket(str string) bool {
 	return str == "[" ||
 		str == "]" ||
 		str == "(" ||
-		str == ")"
+		str == ")" ||
+		str == "{" ||
+		str == "}"
 }
 
 func isOperator(str string) bool {
@@ -180,6 +189,7 @@ func isOperator(str string) bool {
 		str == "." ||
 		str == ";" ||
 		str == "@" ||
+		str == "=" ||
 		str == "::" ||
 		str == "->" ||
 		str == "//"
