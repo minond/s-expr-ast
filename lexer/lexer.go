@@ -55,20 +55,18 @@ func Lex(raw string) []Token {
 				value: word,
 			})
 		} else if word := lookahead(letters, i, 1); isOperator(word) {
-			i += 1
 			tokens = append(tokens, Token{
 				kind:  OperatorToken,
 				value: word,
 			})
 		} else if word := lookahead(letters, i, 1); isBracket(word) {
-			i += 1
 			tokens = append(tokens, Token{
 				kind:  BracketToken,
 				value: word,
 			})
 		} else {
 			word, len := lookaheadWord(letters, i)
-			i += len
+			i += len - 1
 
 			tokens = append(tokens, Token{
 				kind:  InvalidToken,
@@ -105,6 +103,41 @@ func isDigit(str string) bool {
 		str == "7" ||
 		str == "8" ||
 		str == "9"
+}
+
+func isLetter(str string) bool {
+	str = strings.ToLower(str)
+
+	return str == "a" ||
+		str == "b" ||
+		str == "c" ||
+		str == "d" ||
+		str == "e" ||
+		str == "f" ||
+		str == "g" ||
+		str == "h" ||
+		str == "i" ||
+		str == "j" ||
+		str == "k" ||
+		str == "l" ||
+		str == "m" ||
+		str == "n" ||
+		str == "o" ||
+		str == "p" ||
+		str == "q" ||
+		str == "r" ||
+		str == "s" ||
+		str == "t" ||
+		str == "u" ||
+		str == "v" ||
+		str == "w" ||
+		str == "x" ||
+		str == "y" ||
+		str == "z"
+}
+
+func isAphaNumeric(str string) bool {
+	return isDigit(str) || isLetter(str)
 }
 
 func isSpace(str string) bool {
@@ -160,11 +193,13 @@ func lookaheadWord(letters []string, start int) (string, int) {
 	buff := ""
 
 	for i := start; i < len(letters); i++ {
-		if isSpace(letters[i]) {
+		curr := letters[i]
+
+		if isSpace(curr) || isOperator(curr) || isBracket(curr) {
 			break
 		}
 
-		buff = buff + letters[i]
+		buff = buff + curr
 	}
 
 	return buff, len(buff)
