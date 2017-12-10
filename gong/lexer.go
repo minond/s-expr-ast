@@ -1,4 +1,4 @@
-package lexer
+package gong
 
 import (
 	"fmt"
