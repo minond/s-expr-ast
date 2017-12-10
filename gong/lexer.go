@@ -13,9 +13,10 @@ type Token struct {
 }
 
 const (
-	EOF = "\n"
+	EOL = "\n"
 
 	EofToken          TokenKind = "eof"
+	EolToken          TokenKind = "eol"
 	InvalidToken      TokenKind = "invalid"
 	IdentifierToken   TokenKind = "identifier"
 	StringToken       TokenKind = "string"
@@ -30,13 +31,15 @@ const (
 func (tok Token) String() string {
 	if tok.kind == EofToken {
 		return "(eof)"
+	} else if tok.kind == EolToken {
+		return "(eol)"
 	} else {
 		return fmt.Sprintf(`(%s "%s")`, tok.kind, tok.value)
 	}
 }
 
 func Lex(raw string) []Token {
-	letters := strings.Split(raw+EOF, "")
+	letters := strings.Split(raw+EOL, "")
 	lettersLen := len(letters)
 
 	var tokens []Token
@@ -52,6 +55,15 @@ func Lex(raw string) []Token {
 			token, len := parseNumber(letters, i)
 			tokens = append(tokens, token)
 			i += len - 1
+		} else if isEol(letter) {
+			// Ignore the last EOL we added
+			if i+1 == lettersLen {
+				continue
+			}
+
+			tokens = append(tokens, Token{
+				kind: EolToken,
+			})
 		} else if isSpace(letter) {
 			continue
 		} else if word, len := lookaheadWord(letters, i); isBoolean(word) {
@@ -154,6 +166,10 @@ func isAphaNumeric(str string) bool {
 	return isDigit(str) || isLetter(str)
 }
 
+func isEol(str string) bool {
+	return str == "\n" || str == "\r"
+}
+
 func isSpace(str string) bool {
 	return str == " " || str == "\t" || str == "\n" || str == "\r"
 }
@@ -190,6 +206,7 @@ func isOperator(str string) bool {
 		str == ";" ||
 		str == "@" ||
 		str == "=" ||
+		str == "\\" ||
 		str == "::" ||
 		str == "->" ||
 		str == "//"
