@@ -17,6 +17,8 @@ const (
 
 	InvalidToken      TokenKind = "invalid"
 	StringToken       TokenKind = "string"
+	OperatorToken     TokenKind = "operator"
+	BracketToken      TokenKind = "bracket"
 	RealNumberToken   TokenKind = "real"
 	HexNumberToken    TokenKind = "hex"
 	BinaryNumberToken TokenKind = "binary"
@@ -50,6 +52,18 @@ func Lex(raw string) []Token {
 			i += len
 			tokens = append(tokens, Token{
 				kind:  BooleanToken,
+				value: word,
+			})
+		} else if word := lookahead(letters, i, 1); isOperator(word) {
+			i += 1
+			tokens = append(tokens, Token{
+				kind:  OperatorToken,
+				value: word,
+			})
+		} else if word := lookahead(letters, i, 1); isBracket(word) {
+			i += 1
+			tokens = append(tokens, Token{
+				kind:  BracketToken,
 				value: word,
 			})
 		} else {
@@ -107,6 +121,23 @@ func isStringQuoteEsc(str string) bool {
 
 func isBoolean(str string) bool {
 	return str == "true" || str == "false"
+}
+
+func isBracket(str string) bool {
+	return str == "[" ||
+		str == "]" ||
+		str == "(" ||
+		str == ")"
+}
+
+func isOperator(str string) bool {
+	return str == "+" ||
+		str == "-" ||
+		str == "*" ||
+		str == "^" ||
+		str == "/" ||
+		str == "&" ||
+		str == "."
 }
 
 func lookahead(letters []string, start, k int) string {
