@@ -28,93 +28,32 @@ func (tok Token) String() string {
 }
 
 func Lex(raw string) []Token {
-	i := 0
-	parts := strings.Split(raw+EOF, "")
-	partsEnd := len(parts)
+	letters := strings.Split(raw+EOF, "")
+	lettersLen := len(letters)
 
 	var tokens []Token
 
-	// lookahead := func(k int) string {
-	// 	buffer := ""
-	//
-	// 	for j := i; j < partsEnd && k != 0; {
-	// 		buffer = buffer + parts[j]
-	// 		k--
-	// 		j++
-	// 	}
-	//
-	// 	return buffer
-	// }
-
-	lookaheadWord := func() (string, int) {
-		buffer := ""
-		len := 0
-
-		for j := i; j < partsEnd; j++ {
-			if isSpace(parts[j]) {
-				break
-			}
-
-			buffer = buffer + parts[j]
-			len++
-		}
-
-		return buffer, len
-	}
-
-	for ; i < partsEnd; i++ {
-		letter := parts[i]
-		peek := EOF
-
-		if i+1 < partsEnd {
-			peek = parts[i+1]
-		}
+	for i := 0; i < lettersLen; i++ {
+		letter := letters[i]
 
 		if isStringQuote(letter) {
-			token, len := parseString(parts, i)
+			token, len := parseString(letters, i)
 			tokens = append(tokens, token)
 			i += len
 		} else if isDigit(letter) {
-			buffer := letter
-			kind := RealNumberToken
-
-			// Type of number?
-			if peek == "x" {
-				kind = HexNumberToken
-				i += 1
-			} else if peek == "b" {
-				kind = BinaryNumberToken
-				i += 1
-			}
-
-			for i = i + 1; i < partsEnd; i++ {
-				next := parts[i]
-
-				if kind == HexNumberToken && isHexDigit(next) {
-					buffer = buffer + next
-				} else if kind == BinaryNumberToken && isBinaryDigit(next) {
-					buffer = buffer + next
-				} else if isDigit(next) {
-					buffer = buffer + next
-				} else {
-					tokens = append(tokens, Token{
-						kind:  kind,
-						value: buffer,
-					})
-
-					break
-				}
-			}
+			token, len := parseNumber(letters, i)
+			tokens = append(tokens, token)
+			i += len
 		} else if isSpace(letter) {
 			continue
-		} else if word, len := lookaheadWord(); isBoolean(word) {
+		} else if word, len := lookaheadWord(letters, i); isBoolean(word) {
 			i += len
 			tokens = append(tokens, Token{
 				kind:  BooleanToken,
 				value: word,
 			})
 		} else {
-			word, len := lookaheadWord()
+			word, len := lookaheadWord(letters, i)
 			i += len
 
 			tokens = append(tokens, Token{
@@ -170,8 +109,38 @@ func isBoolean(str string) bool {
 	return str == "true" || str == "false"
 }
 
+func lookahead(letters []string, start, k int) string {
+	buff := ""
+
+	for i := start; i < len(letters) && k != 0; {
+		buff = buff + letters[i]
+		k--
+		i++
+	}
+
+	return buff
+}
+
+func empty() (Token, int) {
+	return Token{}, 0
+}
+
+func lookaheadWord(letters []string, start int) (string, int) {
+	buff := ""
+
+	for i := start; i < len(letters); i++ {
+		if isSpace(letters[i]) {
+			break
+		}
+
+		buff = buff + letters[i]
+	}
+
+	return buff, len(buff)
+}
+
 func parseString(letters []string, start int) (Token, int) {
-	buffer := ""
+	buff := ""
 
 	for i := start + 1; i < len(letters); i++ {
 		curr := letters[i]
@@ -186,12 +155,48 @@ func parseString(letters []string, start int) (Token, int) {
 		if isStringQuote(curr) && !isStringQuoteEsc(prev) {
 			return Token{
 				kind:  StringToken,
-				value: buffer,
+				value: buff,
 			}, i - start
 		} else if !isStringQuoteEsc(curr) {
-			buffer = buffer + curr
+			buff = buff + curr
 		}
 	}
 
-	return Token{}, 0
+	return empty()
+}
+
+func parseNumber(letters []string, start int) (Token, int) {
+	buff := ""
+	kind := RealNumberToken
+	peek := lookahead(letters, start+1, 1)
+
+	// Type of number?
+	if peek == "x" {
+		kind = HexNumberToken
+		buff = "0x"
+		start += 2
+	} else if peek == "b" {
+		kind = BinaryNumberToken
+		buff = "0b"
+		start += 2
+	}
+
+	for i := start; i < len(letters); i++ {
+		curr := letters[i]
+
+		if kind == HexNumberToken && isHexDigit(curr) {
+			buff = buff + curr
+		} else if kind == BinaryNumberToken && isBinaryDigit(curr) {
+			buff = buff + curr
+		} else if isDigit(curr) {
+			buff = buff + curr
+		} else {
+			return Token{
+				kind:  kind,
+				value: buff,
+			}, len(buff)
+		}
+	}
+
+	return empty()
 }
