@@ -71,23 +71,9 @@ func Lex(raw string) []Token {
 		}
 
 		if isStringQuote(letter) {
-			buffer := ""
-
-			for i = i + 1; i < partsEnd; i++ {
-				next := parts[i]
-				prev := parts[i-1]
-
-				if isStringQuote(next) && !isStringQuoteEsc(prev) {
-					tokens = append(tokens, Token{
-						kind:  StringToken,
-						value: buffer,
-					})
-
-					break
-				} else if !isStringQuoteEsc(next) {
-					buffer = buffer + next
-				}
-			}
+			token, len := parseString(parts, i)
+			tokens = append(tokens, token)
+			i += len
 		} else if isDigit(letter) {
 			buffer := letter
 			kind := RealNumberToken
@@ -121,12 +107,11 @@ func Lex(raw string) []Token {
 			}
 		} else if isSpace(letter) {
 			continue
-		} else if word, len := lookaheadWord(); word == "true" {
-			buffer := "true"
+		} else if word, len := lookaheadWord(); isBoolean(word) {
 			i += len
 			tokens = append(tokens, Token{
 				kind:  BooleanToken,
-				value: buffer,
+				value: word,
 			})
 		} else {
 			word, len := lookaheadWord()
@@ -179,4 +164,34 @@ func isStringQuote(str string) bool {
 
 func isStringQuoteEsc(str string) bool {
 	return str == `\`
+}
+
+func isBoolean(str string) bool {
+	return str == "true" || str == "false"
+}
+
+func parseString(letters []string, start int) (Token, int) {
+	buffer := ""
+
+	for i := start + 1; i < len(letters); i++ {
+		curr := letters[i]
+		prev := ""
+
+		if i != 0 {
+			prev = letters[i-1]
+		}
+
+		// The i = start + 1 up top takes care of skipping the opening quote,
+		// and this below takes handles the closing (unescaped) quote.
+		if isStringQuote(curr) && !isStringQuoteEsc(prev) {
+			return Token{
+				kind:  StringToken,
+				value: buffer,
+			}, i - start
+		} else if !isStringQuoteEsc(curr) {
+			buffer = buffer + curr
+		}
+	}
+
+	return Token{}, 0
 }
