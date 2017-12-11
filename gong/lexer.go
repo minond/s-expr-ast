@@ -8,8 +8,9 @@ import (
 type TokenKind string
 
 type Token struct {
-	kind  TokenKind
-	value string
+	kind   TokenKind
+	value  string
+	offset int
 }
 
 const (
@@ -30,21 +31,30 @@ const (
 
 func (tok Token) String() string {
 	if tok.kind == EofToken {
-		return "(eof)"
+		return fmt.Sprintf(`(eof:%d)`, tok.offset)
 	} else if tok.kind == EolToken {
-		return "(eol)"
+		return fmt.Sprintf(`(eol:%d)`, tok.offset)
 	} else {
-		return fmt.Sprintf(`(%s "%s")`, tok.kind, tok.value)
+		return fmt.Sprintf(`(%s:%d "%s")`, tok.kind, tok.offset, tok.value)
+	}
+}
+
+func token(kind TokenKind, value string, offset int) Token {
+	return Token{
+		kind:   kind,
+		value:  value,
+		offset: offset,
 	}
 }
 
 func Lex(raw string) []Token {
+	i := 0
 	letters := strings.Split(raw+EOL, "")
 	lettersLen := len(letters)
 
 	var tokens []Token
 
-	for i := 0; i < lettersLen; i++ {
+	for ; i < lettersLen; i++ {
 		letter := letters[i]
 
 		if isQuote(letter) {
@@ -61,47 +71,27 @@ func Lex(raw string) []Token {
 				continue
 			}
 
-			tokens = append(tokens, Token{
-				kind: EolToken,
-			})
+			tokens = append(tokens, token(EolToken, "", i))
 		} else if isSpace(letter) {
 			continue
 		} else if word, len := lookaheadWord(letters, i); isBoolean(word) {
+			tokens = append(tokens, token(BooleanToken, word, i))
 			i += len - 1
-			tokens = append(tokens, Token{
-				kind:  BooleanToken,
-				value: word,
-			})
 		} else if word := lookahead(letters, i, 2); isOperator(word) {
+			tokens = append(tokens, token(OperatorToken, word, i))
 			i += 1
-			tokens = append(tokens, Token{
-				kind:  OperatorToken,
-				value: word,
-			})
 		} else if word := lookahead(letters, i, 1); isOperator(word) {
-			tokens = append(tokens, Token{
-				kind:  OperatorToken,
-				value: word,
-			})
+			tokens = append(tokens, token(OperatorToken, word, i))
 		} else if word := lookahead(letters, i, 1); isBracket(word) {
-			tokens = append(tokens, Token{
-				kind:  BracketToken,
-				value: word,
-			})
+			tokens = append(tokens, token(BracketToken, word, i))
 		} else {
 			word, len := lookaheadWord(letters, i)
+			tokens = append(tokens, token(IdentifierToken, word, i))
 			i += len - 1
-
-			tokens = append(tokens, Token{
-				kind:  IdentifierToken,
-				value: word,
-			})
 		}
 	}
 
-	return append(tokens, Token{
-		kind: EofToken,
-	})
+	return append(tokens, token(EofToken, "", i))
 }
 
 func isBinaryDigit(str string) bool {
@@ -269,17 +259,11 @@ func parseQuoted(letters []string, start int, closingQuote string) (Token, int) 
 		// If we're not at the very beginning, we're parsing a quote - our
 		// closingQuote - and the previous char wasn't an escape, we're done.
 		if i != start && isQuote(curr) && !isStringQuoteEsc(prev) && curr == closingQuote {
-			return Token{
-				kind:  StringToken,
-				value: buff,
-			}, i - start
+			return token(StringToken, buff, start), i - start
 		}
 	}
 
-	return Token{
-		kind:  InvalidToken,
-		value: buff,
-	}, len(buff)
+	return token(InvalidToken, buff, start), len(buff)
 }
 
 func parseNumeric(letters []string, start int) (Token, int) {
@@ -318,15 +302,9 @@ func parseNumeric(letters []string, start int) (Token, int) {
 
 			buff = buff + curr
 		} else {
-			return Token{
-				kind:  kind,
-				value: buff,
-			}, len(buff)
+			return token(kind, buff, start), len(buff)
 		}
 	}
 
-	return Token{
-		kind:  InvalidToken,
-		value: buff,
-	}, len(buff)
+	return token(InvalidToken, buff, start), len(buff)
 }
