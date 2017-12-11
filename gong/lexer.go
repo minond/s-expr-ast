@@ -202,10 +202,16 @@ func isOperator(str string) bool {
 		str == "^" ||
 		str == "/" ||
 		str == "&" ||
+		str == "." ||
 		str == ";" ||
+		str == "<" ||
+		str == ">" ||
+		str == "|" ||
 		str == "@" ||
 		str == "=" ||
 		str == "\\" ||
+		str == "||" ||
+		str == "&&" ||
 		str == "::" ||
 		str == "->" ||
 		str == "//"

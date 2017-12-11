@@ -34,4 +34,6 @@ func main() {
 	show(`one "tw\"o" 'thr\'ee' '"""""""' "''''''''''"`)
 	show(`iiii"i`)
 	show(`0b0001 1x2`)
+	show(`true || false ; true | false ; true && true ; true & true;`)
+	show(`true||false;true|false;true&&true;true&true;`)
 }
