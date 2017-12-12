@@ -23,7 +23,8 @@ const (
 	StringToken       TokenKind = "string"
 	OperatorToken     TokenKind = "operator"
 	BracketToken      TokenKind = "bracket"
-	RealNumberToken   TokenKind = "real"
+	DecimalToken      TokenKind = "decimal"
+	IntegerToken      TokenKind = "integer"
 	HexNumberToken    TokenKind = "hex"
 	BinaryNumberToken TokenKind = "binary"
 	BooleanToken      TokenKind = "bool"
@@ -268,8 +269,8 @@ func parseQuoted(letters []string, start int, closingQuote string) (Token, int) 
 
 func parseNumeric(letters []string, start int) (Token, int) {
 	buff := ""
-	kind := RealNumberToken
 	peek := lookahead(letters, start, 2)
+	kind := IntegerToken
 	isInt := true
 
 	// Is this a non-decimal representation of a number?
@@ -287,7 +288,7 @@ func parseNumeric(letters []string, start int) (Token, int) {
 		curr := letters[i]
 
 		isRealChar := isDigit(curr) || curr == "."
-		isRealKind := kind == RealNumberToken || kind == InvalidToken
+		isRealKind := kind == IntegerToken || kind == DecimalToken || kind == InvalidToken
 
 		if kind == HexNumberToken && isHexDigit(curr) {
 			buff = buff + curr
@@ -295,6 +296,7 @@ func parseNumeric(letters []string, start int) (Token, int) {
 			buff = buff + curr
 		} else if isRealKind && isRealChar {
 			if isInt == true && curr == "." {
+				kind = DecimalToken
 				isInt = false
 			} else if !isDigit(curr) {
 				kind = InvalidToken
