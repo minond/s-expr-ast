@@ -17,7 +17,7 @@ func show(prog string) {
 	fmt.Print("\n")
 }
 
-func main() {
+func repl() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
@@ -34,4 +34,8 @@ func main() {
 			show(strings.TrimSpace(text))
 		}
 	}
+}
+
+func main() {
+	repl()
 }
