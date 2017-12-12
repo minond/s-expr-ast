@@ -21,6 +21,7 @@ const (
 	InvalidToken      TokenKind = "invalid"
 	IdentifierToken   TokenKind = "identifier"
 	StringToken       TokenKind = "string"
+	CharacterToken    TokenKind = "character"
 	OperatorToken     TokenKind = "operator"
 	BracketToken      TokenKind = "bracket"
 	DecimalToken      TokenKind = "decimal"
@@ -194,6 +195,7 @@ func isOperator(str string) bool {
 		str == "/" ||
 		str == "&" ||
 		str == "." ||
+		str == "," ||
 		str == ";" ||
 		str == "<" ||
 		str == ">" ||
@@ -240,7 +242,11 @@ func lookaheadWord(letters []string, start int) (string, int) {
 	return buff, len(buff)
 }
 
+// Parses:
+//   StringToken
+//   CharacterToken
 func parseQuoted(letters []string, start int, closingQuote string) (Token, int) {
+	kind := StringToken
 	buff := ""
 	lettersLen := len(letters)
 
@@ -260,13 +266,31 @@ func parseQuoted(letters []string, start int, closingQuote string) (Token, int) 
 		// If we're not at the very beginning, we're parsing a quote - our
 		// closingQuote - and the previous char wasn't an escape, we're done.
 		if i != start && isQuote(curr) && !isStringQuoteEsc(prev) && curr == closingQuote {
-			return token(StringToken, buff, start), i - start
+			if closingQuote == "'" {
+				switch len(buff[1 : len(buff)-1]) {
+				case 0:
+					fallthrough
+				case 1:
+					kind = CharacterToken
+					break
+
+				default:
+					kind = InvalidToken
+				}
+			}
+
+			return token(kind, buff, start), i - start
 		}
 	}
 
 	return token(InvalidToken, buff, start), len(buff)
 }
 
+// Parses:
+//   IntegerToken
+//   DecimalToken
+//   HexNumberToken
+//   BinaryNumberToken
 func parseNumeric(letters []string, start int) (Token, int) {
 	buff := ""
 	peek := lookahead(letters, start, 2)
@@ -274,11 +298,11 @@ func parseNumeric(letters []string, start int) (Token, int) {
 	isInt := true
 
 	// Is this a non-decimal representation of a number?
-	if peek == "0x" {
+	if peek == "0x" || peek == "0X" {
 		kind = HexNumberToken
 		buff = peek
 		start += 2
-	} else if peek == "0b" {
+	} else if peek == "0b" || peek == "0B" {
 		kind = BinaryNumberToken
 		buff = peek
 		start += 2
