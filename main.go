@@ -10,8 +10,9 @@ import (
 )
 
 func show(prog string) {
+	fmt.Println("\n  Tokens:\n")
 	for _, tok := range gong.Lex(prog) {
-		fmt.Println(tok)
+		fmt.Printf("    - %s\n", tok)
 	}
 
 	fmt.Print("\n")

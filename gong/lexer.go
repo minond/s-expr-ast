@@ -36,7 +36,7 @@ func (tok Token) String() string {
 	} else if tok.kind == EolToken {
 		return fmt.Sprintf(`(eol:%d)`, tok.offset)
 	} else {
-		return fmt.Sprintf(`(%s:%d "%s")`, tok.kind, tok.offset, tok.value)
+		return fmt.Sprintf(`(%s:%d:%d "%s")`, tok.kind, tok.offset, len(tok.value), tok.value)
 	}
 }
 
