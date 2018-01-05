@@ -9,7 +9,7 @@ type TokenKind string
 
 type Token struct {
 	kind   TokenKind
-	value  string
+	lexeme string
 	offset int
 }
 
@@ -22,13 +22,28 @@ const (
 	IdentifierToken   TokenKind = "identifier"
 	StringToken       TokenKind = "string"
 	CharacterToken    TokenKind = "character"
-	OperatorToken     TokenKind = "operator"
-	BracketToken      TokenKind = "bracket"
 	DecimalToken      TokenKind = "decimal"
 	IntegerToken      TokenKind = "integer"
 	HexNumberToken    TokenKind = "hex"
 	BinaryNumberToken TokenKind = "binary"
 	BooleanToken      TokenKind = "bool"
+
+	LeftParenToken    TokenKind = "lpar"
+	RightParenToken   TokenKind = "rpar"
+	InvalidParenToken TokenKind = "ivlpar"
+
+	MinusOperatorToken   TokenKind = "minusop"
+	PlusOperatorToken    TokenKind = "plusop"
+	MultOperatorToken    TokenKind = "multop"
+	DivOperatorToken     TokenKind = "divop"
+	ExpOperatorToken     TokenKind = "expop"
+	GtOperatorToken      TokenKind = "gtop"
+	GeOperatorToken      TokenKind = "geop"
+	LtOperatorToken      TokenKind = "ltop"
+	LeOperatorToken      TokenKind = "leop"
+	EqOperatorToken      TokenKind = "eqop"
+	NeOperatorToken      TokenKind = "neop"
+	InvalidOperatorToken TokenKind = "ivldop"
 )
 
 func (tok Token) String() string {
@@ -37,14 +52,14 @@ func (tok Token) String() string {
 	} else if tok.kind == EolToken {
 		return fmt.Sprintf(`(eol:%d)`, tok.offset)
 	} else {
-		return fmt.Sprintf(`(%s:%d:%d "%s")`, tok.kind, tok.offset, len(tok.value), tok.value)
+		return fmt.Sprintf(`(%s:%d:%d "%s")`, tok.kind, tok.offset, len(tok.lexeme), tok.lexeme)
 	}
 }
 
-func token(kind TokenKind, value string, offset int) Token {
+func token(kind TokenKind, lexeme string, offset int) Token {
 	return Token{
 		kind:   kind,
-		value:  value,
+		lexeme: lexeme,
 		offset: offset,
 	}
 }
@@ -80,12 +95,12 @@ func Lex(raw string) []Token {
 			tokens = append(tokens, token(BooleanToken, word, i))
 			i += len - 1
 		} else if word := lookahead(letters, i, 2); isOperator(word) {
-			tokens = append(tokens, token(OperatorToken, word, i))
+			tokens = append(tokens, token(getOperatorToken(word), word, i))
 			i += 1
 		} else if word := lookahead(letters, i, 1); isOperator(word) {
-			tokens = append(tokens, token(OperatorToken, word, i))
-		} else if word := lookahead(letters, i, 1); isBracket(word) {
-			tokens = append(tokens, token(BracketToken, word, i))
+			tokens = append(tokens, token(getOperatorToken(word), word, i))
+		} else if word := lookahead(letters, i, 1); isParen(word) {
+			tokens = append(tokens, token(getParenToken(word), word, i))
 		} else {
 			word, len := lookaheadWord(letters, i)
 			tokens = append(tokens, token(IdentifierToken, word, i))
@@ -94,6 +109,45 @@ func Lex(raw string) []Token {
 	}
 
 	return append(tokens, token(EofToken, "", i))
+}
+
+func getParenToken(par string) TokenKind {
+	toks := map[string]TokenKind{
+		"(": LeftParenToken,
+		")": RightParenToken,
+	}
+
+	tok, ok := toks[par]
+
+	if !ok {
+		return InvalidParenToken
+	} else {
+		return tok
+	}
+}
+
+func getOperatorToken(op string) TokenKind {
+	toks := map[string]TokenKind{
+		"+":  PlusOperatorToken,
+		"-":  MinusOperatorToken,
+		"*":  MultOperatorToken,
+		"/":  DivOperatorToken,
+		"^":  ExpOperatorToken,
+		">":  GtOperatorToken,
+		">=": GeOperatorToken,
+		"<":  LtOperatorToken,
+		"<=": LeOperatorToken,
+		"==": EqOperatorToken,
+		"!=": NeOperatorToken,
+	}
+
+	tok, ok := toks[op]
+
+	if !ok {
+		return InvalidOperatorToken
+	} else {
+		return tok
+	}
 }
 
 func isBinaryDigit(str string) bool {
@@ -178,7 +232,7 @@ func isBoolean(str string) bool {
 	return str == "true" || str == "false"
 }
 
-func isBracket(str string) bool {
+func isParen(str string) bool {
 	return str == "[" ||
 		str == "]" ||
 		str == "(" ||
@@ -205,6 +259,7 @@ func isOperator(str string) bool {
 		str == ":" ||
 		str == "=" ||
 		str == "\\" ||
+		str == "==" ||
 		str == "||" ||
 		str == "&&" ||
 		str == "::" ||
@@ -230,7 +285,7 @@ func lookaheadWord(letters []string, start int) (string, int) {
 	for i := start; i < len(letters); i++ {
 		curr := letters[i]
 
-		if isSpace(curr) || isBracket(curr) || isQuote(curr) {
+		if isSpace(curr) || isParen(curr) || isQuote(curr) {
 			break
 		}
 
