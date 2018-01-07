@@ -19,12 +19,14 @@ const (
 	stringToken     tokenId = "strtok"
 	booleanToken    tokenId = "booltok"
 	identifierToken tokenId = "idtok"
-	parenToken      tokenId = "partok"
+	quoteToken      tokenId = "quotetok"
+	openParenToken  tokenId = "oparentok"
+	closeParenToken tokenId = "cparentok"
 	eofToken        tokenId = "eoftok"
 	invalidToken    tokenId = "inltok"
 
-	charEos        = rune(-1)
 	charNil        = rune(0)
+	charEos        = rune(-1)
 	charOpenParen  = rune('(')
 	charCloseParen = rune(')')
 	charPeriod     = rune('.')
@@ -32,10 +34,11 @@ const (
 	charDblQuote   = rune('"')
 	charGt         = rune('>')
 	charFslash     = rune('/')
-	charBslash     = rune('\\')
 	charZero       = rune('0')
 	charNine       = rune('9')
 	charSpace      = rune(' ')
+	charSngQuote   = rune('\'')
+	charBslash     = rune('\\')
 	charTab        = rune('\t')
 	charNewline    = rune('\n')
 	charReturn     = rune('\r')
@@ -47,7 +50,9 @@ const (
 )
 
 func (t token) String() string {
-	if t.err != nil {
+	if t.id == eofToken {
+		return "(eof)"
+	} else if t.err != nil {
 		return fmt.Sprintf("(ERROR: %s in (%s: `%s`))", t.err, t.id, string(t.lexeme))
 	} else {
 		return fmt.Sprintf("(%s: `%s`)", t.id, string(t.lexeme))
@@ -68,13 +73,6 @@ func NewCharToken(id tokenId, lexeme rune, offset int) token {
 }
 
 /**
- * This is our lisp's grammar:
- *
- * statement	= expression* ;
- *
- * expression	= "'" primary
- *              | "(" primary* ")" ;
- *
  * primary      = NUMBER
  *              | STRING
  *              | BOOLEAN
@@ -106,8 +104,12 @@ func Scan(source string) []token {
 
 		if isSpace(curr) {
 			continue
-		} else if isParen(curr) {
-			tokens = append(tokens, NewCharToken(parenToken, curr, pos))
+		} else if curr == charSngQuote {
+			tokens = append(tokens, NewCharToken(quoteToken, curr, pos))
+		} else if curr == charOpenParen {
+			tokens = append(tokens, NewCharToken(openParenToken, curr, pos))
+		} else if curr == charCloseParen {
+			tokens = append(tokens, NewCharToken(closeParenToken, curr, pos))
 		} else if isNumeric(curr) {
 			tok := parseNumeric(chars, pos)
 			pos += len(tok.lexeme) - 1
@@ -125,7 +127,7 @@ func Scan(source string) []token {
 		}
 	}
 
-	return tokens
+	return append(tokens, token{id: eofToken})
 }
 
 func isNumeric(r rune) bool {
