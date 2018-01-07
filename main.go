@@ -9,10 +9,10 @@ import (
 func main() {
 	toks := gong.Scan(`
 
-(define atom
+(define atom?
   (lambda (x)
-    (and (not (null x))
-         (not (pair x)))))
+    (and (not (null? x))
+         (not (pair? x)))))
 
 `)
 

@@ -31,6 +31,7 @@ const (
 	charCloseParen = rune(')')
 	charPeriod     = rune('.')
 	charDash       = rune('-')
+	charQuestion   = rune('?')
 	charDblQuote   = rune('"')
 	charGt         = rune('>')
 	charFslash     = rune('/')
@@ -162,6 +163,7 @@ func isParen(r rune) bool {
 
 func isOperator(r rune) bool {
 	return r == charDash ||
+		r == charQuestion ||
 		r == charGt ||
 		r == charFslash
 }
