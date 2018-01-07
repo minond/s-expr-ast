@@ -16,11 +16,9 @@ func main() {
 
 `)
 
-	stms := gong.Parse(toks)
+	statements := gong.Parse(toks)
 
-	// for _, tok := range toks {
-	// 	fmt.Println(tok)
-	// }
-
-	fmt.Println(stms)
+	for _, statement := range statements {
+		fmt.Println(statement)
+	}
 }
