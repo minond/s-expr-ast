@@ -18,11 +18,6 @@ type expression struct {
 	token token
 }
 
-// type primary struct {
-// 	expression *expression
-// 	token      *token
-// }
-
 const (
 	sexpression expressionKind = "sexpression"
 	quote       expressionKind = "quote"
@@ -89,7 +84,6 @@ func Parse(tokens []token) []expression {
 
 	for !p.done() {
 		expressions = append(expressions, p.expression())
-		break
 	}
 
 	return expressions
@@ -159,7 +153,7 @@ func (p *parser) primary() expression {
 }
 
 func (p parser) done() bool {
-	return p.pos >= len(p.tokens)
+	return p.pos >= len(p.tokens) || p.tokens[p.pos].id == eofToken
 }
 
 func (p parser) peek() token {
