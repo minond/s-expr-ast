@@ -1,6 +1,9 @@
 package gong
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type tokenId string
 
@@ -8,6 +11,7 @@ type token struct {
 	id     tokenId
 	lexeme []rune
 	offset int
+	err    error
 }
 
 const (
@@ -19,13 +23,16 @@ const (
 	eofToken        tokenId = "eoftok"
 	invalidToken    tokenId = "inltok"
 
+	charEos        = rune(-1)
 	charNil        = rune(0)
 	charOpenParen  = rune('(')
 	charCloseParen = rune(')')
 	charPeriod     = rune('.')
 	charDash       = rune('-')
+	charDblQuote   = rune('"')
 	charGt         = rune('>')
 	charFslash     = rune('/')
+	charBslash     = rune('\\')
 	charZero       = rune('0')
 	charNine       = rune('9')
 	charSpace      = rune(' ')
@@ -40,7 +47,11 @@ const (
 )
 
 func (t token) String() string {
-	return fmt.Sprintf("(%s: `%s`)", t.id, string(t.lexeme))
+	if t.err != nil {
+		return fmt.Sprintf("(ERROR: %s in (%s: `%s`))", t.err, t.id, string(t.lexeme))
+	} else {
+		return fmt.Sprintf("(%s: `%s`)", t.id, string(t.lexeme))
+	}
 }
 
 func NewToken(id tokenId, lexeme []rune, offset int) token {
@@ -48,6 +59,7 @@ func NewToken(id tokenId, lexeme []rune, offset int) token {
 		id:     id,
 		lexeme: lexeme,
 		offset: offset,
+		err:    nil,
 	}
 }
 
@@ -104,6 +116,10 @@ func Scan(source string) []token {
 			tok := parseIdentifier(chars, pos)
 			pos += len(tok.lexeme) - 1
 			tokens = append(tokens, tok)
+		} else if curr == charDblQuote {
+			tok := parseString(chars, pos)
+			pos += len(tok.lexeme) - 1
+			tokens = append(tokens, tok)
 		} else {
 			tokens = append(tokens, NewCharToken(invalidToken, curr, pos))
 		}
@@ -156,9 +172,13 @@ func isIdentifierLike(r rune) bool {
 	return isIdentifier(r) || isNumeric(r)
 }
 
+func isEof(r rune) bool {
+	return r == charEos
+}
+
 func next(chars []rune, curr int) rune {
-	if len(chars) < curr+1 {
-		return charNil
+	if curr+1 >= len(chars) {
+		return charEos
 	} else {
 		return chars[curr+1]
 	}
@@ -182,11 +202,50 @@ func takeWhile(chars []rune, pos int, f func(r rune) bool) []rune {
 	return buff
 }
 
+func parseString(chars []rune, pos int) token {
+	var buff []rune
+	var err error
+
+	curr := chars[pos]
+	peek := charNil
+
+	for {
+		peek = next(chars, pos)
+
+		if curr == charEos {
+			err = errors.New("Missing closing parentheses")
+			break
+		} else if curr == charBslash && peek == charDblQuote {
+			// Escaped quote, add quote and skip over escaped char
+			buff = append(buff, curr)
+			buff = append(buff, peek)
+			curr = next(chars, pos+1)
+			pos += 2
+		} else if curr == charDblQuote && len(buff) != 0 {
+			// End of the string
+			buff = append(buff, curr)
+			break
+		} else {
+			buff = append(buff, curr)
+			pos += 1
+			curr = peek
+		}
+	}
+
+	return token{
+		id:     stringToken,
+		lexeme: buff,
+		offset: pos,
+		err:    err,
+	}
+}
+
 func parseIdentifier(chars []rune, pos int) token {
 	return token{
 		id:     identifierToken,
 		lexeme: takeWhile(chars, pos, isIdentifierLike),
 		offset: pos,
+		err:    nil,
 	}
 }
 
@@ -195,5 +254,6 @@ func parseNumeric(chars []rune, pos int) token {
 		id:     numberToken,
 		lexeme: takeWhile(chars, pos, isNumericLike),
 		offset: pos,
+		err:    nil,
 	}
 }
