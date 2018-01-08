@@ -92,7 +92,7 @@ func NewCharToken(id tokenId, lexeme rune, offset int) token {
  * IDENTIFIER   = A - z [ A - z | 0 - 9 | - | > | / ]* ;
  *
  */
-func Scan(source string) []token {
+func Scanner(source string) []token {
 	var tokens []token
 	var curr rune
 
@@ -124,7 +124,9 @@ func Scan(source string) []token {
 			pos += len(tok.lexeme) - 1
 			tokens = append(tokens, tok)
 		} else {
-			tokens = append(tokens, NewCharToken(invalidToken, curr, pos))
+			tok := NewCharToken(invalidToken, curr, pos)
+			tok.err = fmt.Errorf("Invalid token: `%s`", string(curr))
+			tokens = append(tokens, tok)
 		}
 	}
 

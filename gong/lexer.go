@@ -1,6 +1,7 @@
 package gong
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -16,6 +17,7 @@ type expression struct {
 	kind  expressionKind
 	exprs []expression
 	token token
+	err   error
 }
 
 const (
@@ -42,7 +44,29 @@ func (e expression) String() string {
 		return fmt.Sprintf("(%s)", strings.Join(content, " "))
 
 	default:
-		return "(ERROR)"
+		if e.err == nil {
+			return "(ERROR)"
+		} else {
+			return fmt.Sprintf("(ERROR: %s)", e.err)
+		}
+	}
+}
+
+func Parse(source string) []expression {
+	tokens := Scanner(source)
+	err := false
+
+	for _, token := range tokens {
+		if token.err != nil {
+			err = true
+			fmt.Println(token, token.err)
+		}
+	}
+
+	if err {
+		return []expression{}
+	} else {
+		return Lexer(tokens)
 	}
 }
 
@@ -74,7 +98,7 @@ func (e expression) String() string {
  * IDENTIFIER   = A - z [ A - z | 0 - 9 | - | > | / ]* ;
  *
  */
-func Parse(tokens []token) []expression {
+func Lexer(tokens []token) []expression {
 	var expressions []expression
 
 	p := parser{
@@ -114,7 +138,12 @@ func (p *parser) sexpr() expression {
 	}
 
 	for {
-		if p.matches(quoteToken) {
+		if p.done() {
+			expr.exprs = append(expr.exprs, expression{
+				err: errors.New("Unexpected end of input"),
+			})
+			break
+		} else if p.matches(quoteToken) {
 			expr.exprs = append(expr.exprs, p.expression())
 		} else {
 			expr.exprs = append(expr.exprs, p.primary())
@@ -147,8 +176,10 @@ func (p *parser) primary() expression {
 		return p.sexpr()
 
 	default:
-		panic("Unkown token")
-		return expression{}
+		return expression{
+			err:   fmt.Errorf("Unexpected token: %s", p.peek()),
+			token: p.eat(),
+		}
 	}
 }
 

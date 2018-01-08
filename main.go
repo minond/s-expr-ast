@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	toks := gong.Scan(`
+	statements := gong.Parse(`
 
 (define atom?
   (lambda (x)
@@ -15,8 +15,6 @@ func main() {
          (not (pair? x)))))
 
 `)
-
-	statements := gong.Parse(toks)
 
 	for _, statement := range statements {
 		fmt.Println(statement)
