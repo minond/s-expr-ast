@@ -3,6 +3,7 @@ package gong
 import (
 	"errors"
 	"fmt"
+	"unicode"
 )
 
 type tokenId string
@@ -31,6 +32,7 @@ const (
 	charCloseParen = rune(')')
 	charPeriod     = rune('.')
 	charDash       = rune('-')
+	charPlus       = rune('+')
 	charQuestion   = rune('?')
 	charDblQuote   = rune('"')
 	charGt         = rune('>')
@@ -45,7 +47,12 @@ const (
 	charReturn     = rune('\r')
 
 	charA = rune('A')
+	chara = rune('a')
 	charb = rune('b')
+	charc = rune('c')
+	chard = rune('d')
+	chare = rune('e')
+	charf = rune('f')
 	charx = rune('x')
 	charz = rune('z')
 )
@@ -138,10 +145,16 @@ func isNumeric(r rune) bool {
 }
 
 func isNumericLike(r rune) bool {
+	lr := unicode.ToLower(r)
 	return isNumeric(r) ||
 		r == charPeriod ||
-		r == charx ||
-		r == charb
+		lr == charx ||
+		lr == chara ||
+		lr == charb ||
+		lr == charc ||
+		lr == chard ||
+		lr == chare ||
+		lr == charf
 }
 
 func isAlpha(r rune) bool {
@@ -165,6 +178,7 @@ func isParen(r rune) bool {
 
 func isOperator(r rune) bool {
 	return r == charDash ||
+		r == charPlus ||
 		r == charQuestion ||
 		r == charGt ||
 		r == charFslash
