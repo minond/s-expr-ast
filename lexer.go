@@ -1,4 +1,4 @@
-package gong
+package main
 
 import (
 	"errors"

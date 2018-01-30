@@ -1,0 +1,1 @@
+Demonstrating how one might parse and build an AST of parsed SExpressions. This tokenizes Lisp source code, generates and AST, then prints the AST into a expression that matches the input. Except for whitespace. What could you do with this? Well it's one step away from an interpreter and/or a formatter. Run with `go run *.go`.

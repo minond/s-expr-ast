@@ -2,12 +2,10 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/minond/gong/gong"
 )
 
 func main() {
-	statements := gong.Parse(`
+	statements := Parse(`
 
 (define atom?
   (lambda (x)
